@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View page</title>
+    <style>
+        .editorwindow {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            width: 700px;
+            height: 500px;
+        }
+        #editor {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+</head>
+<body>
+    Here's the thing. I can type whatever I want here!
+    <div class="editorwindow" style="background-color: #23251E">
+        <button type="button" class="close" aria-label="Close">
+            <span aria-hidden="true" style="color: white; padding-right: 6px;">&times;</span>
+        </button>
+        <iframe src="/edit/" id="editor">
+            l
+        </iframe>
+    </div>
+</body>
+</html>

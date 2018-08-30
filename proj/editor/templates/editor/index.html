@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home page</title>
+    <style type="text/css" media="screen">
+        #editor { 
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            margin-top: 33px;
+        }
+
+        #submit {
+            position: absolute;
+            right: 0;
+            margin-right: 75px;
+            margin-top: 35px;
+        }
+
+        #bounce {
+            position: absolute;
+            right: 0;
+            margin-right: 5px;
+            margin-top: 35px;
+        }
+        .fade-enter-active,
+        .fade-leave-active {
+          transition: opacity .5s
+        }
+
+        .fade-enter,
+        .fade-leave-active {
+          opacity: 0
+        }
+
+    </style>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.5.2/animate.min.css">
+</head>
+<body>
+<div id="editorapp">
+    <div style="height: 2px"></div>
+    <div id="parentdirectory" style="display: inline; margin-left: 2px">
+        <button type="button" class="btn btn-secondary btn-sm parentdirectory" style="margin-right: 2px;" v-for="(item, index) in path" v-on:click="moveDirectory(index)" v-bind:id="item.ID">[[ item ]]</button>
+    </div>
+    <div id="currentdirectory" style="display: inline; float: right; margin-right: 2px;">
+        <button type="button" class="btn btn-success btn-sm currentdirectory" style="margin-right: 2px;" v-for="(item, index) in otherfiles" v-on:click="moveDirectory(index)">[[item]]</button>
+    </div>
+<div id="editor">{{ file }}
+</div>
+<button type="submit" class="btn btn-primary btn-sm" id="submit" v-on:click="saveText" :class="{'bounce animated': animated}" @animationend="animated = false">Save!</button>
+<button type="submit" class="btn btn-primary btn-sm" id="bounce" v-on:click="bounce" :class="{'bounce animated': animated}" @animationend="animated = false">Bounce!</button>
+<!--<div id="status" style="color: blue; position: absolute; color: white; bottom: 10px; right: 10px;">[[savebutton.filename]]</div>-->
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.1/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+<script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+<script>
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/python");
+</script>
+<script>
+    var csrftoken = Cookies.get('csrftoken');
+    var parentdirectory = new Vue({
+      delimiters: ['[[', ']]'],
+      el: '#parentdirectory',
+      data: {
+        title: 'Welcome!',
+        path: {% autoescape off %}{{ path }}{% endautoescape %}
+      },
+      methods: {
+        moveDirectory: function(index) {
+            axios({
+              method: 'post',
+              url: '/cd/',
+              data: {
+                path: parentdirectory.path,
+                otherfiles: otherfiles.otherfiles,
+                clicked: index,
+                which: 'parent'
+              },
+              headers: {"X-CSRFToken": Cookies.get('csrftoken'),
+                        "X-Requested-With": 'XMLHttpRequest'}
+            }).then(function (response) {
+                parentdirectory.path = response['data']['path']
+                otherfiles.otherfiles = response['data']['otherfiles'];
+            });
+        }
+      }
+    });
+    var otherfiles = new Vue({
+      delimiters: ['[[', ']]'],
+      el: '#currentdirectory',
+      data: {
+        otherfiles: {% autoescape off %}{{ otherfiles }}{% endautoescape %}
+      },
+      methods: {
+        moveDirectory: function(index) {
+            axios({
+              method: 'post',
+              url: '/cd/',
+              data: {
+                path: parentdirectory.path,
+                otherfiles: otherfiles.otherfiles,
+                clicked: index,
+                which: 'other'
+              },
+              headers: {"X-CSRFToken": Cookies.get('csrftoken'),
+                        "X-Requested-With": 'XMLHttpRequest'}
+            }).then(function (response) {
+                parentdirectory.path = response['data']['path'];
+                otherfiles.otherfiles = response['data']['otherfiles'];
+                if (response['data']['filename'] !== null) {
+                    editor.setValue(response['data']['file'], -1)
+                    savebutton.filename = response['data']['filename']
+                }
+            });
+        }
+      }
+    });
+    var savebutton = new Vue({
+        delimiters: ['[[', ']]'],
+        el: '#submit',
+        data: {
+            animated: false,
+            filename: {% autoescape off %}'{{ filename }}'{% endautoescape %}
+        },
+        methods: {
+            saveText: function(event) {
+                this.animated = true;
+                axios({
+                    method: 'post',
+                    url: '/save/',
+                    data: {
+                        file: editor.getValue(),
+                        filename: savebutton.filename
+                    },
+                    headers: {"X-CSRFToken": Cookies.get('csrftoken'),
+                        "X-Requested-With": 'XMLHttpRequest'}
+                }).then(function (response) {
+                    console.log('Submitted status: ' + response);
+                });
+            }
+        }
+    });
+    var bouncebutton = new Vue({
+        delimiters: ['[[', ']]'],
+        el: '#bounce',
+        data: {
+            animated: false
+        },
+        methods: {
+            bounce: function(event) {
+                this.animated = true;
+                axios({
+                    method: 'post',
+                    url: '/bounce/',
+                    data: {},
+                    headers: {"X-CSRFToken": Cookies.get('csrftoken'),
+                        "X-Requested-With": 'XMLHttpRequest'}
+                }).then(function (response) {
+                    console.log('Server is bouncing');
+                });
+            }
+        }
+    });
+</script>
+<script>
+    document.addEventListener ("keydown", function (zEvent) {
+        if (zEvent.metaKey  &&  zEvent.code === "KeyS") {
+            savebutton.saveText(zEvent);
+            zEvent.preventDefault();
+        }
+    } );
+</script>
+</body>
+</html>
